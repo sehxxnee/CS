@@ -18,3 +18,9 @@
 ## 3. 동시성이란? 동시성 해결 방법
 
  
+
+## 4. RESTFUL API란?
+
+## 5. POST와 GET의 차이 
+
+## 6. HTTP와 HTTPS의 차이 
