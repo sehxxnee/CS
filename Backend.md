@@ -193,8 +193,8 @@ JWT는 보통 요청마다 헤더에 실리기 때문에 크기가 커질수록 
 
 
 # 10.some Terminology
-MSA : Microservice Architecture 하나의 큰 서비스를 여러 개의 독립적인 작은 서비스로 분리해 개발·배포·운영하는 아키텍처 스타일
-MSK : Managed Streaming for Apache Kafka AWS에서 제공하는 Apache Kafka 관리형 서비스. Kafka 클러스터 구축/운영을 AWS가 대신 관리해줌.
-CCB : Change Control Board (변경 심의 위원회)
-SCM : Source Code Management Git 같은 형상관리/소스코드 관리 시스템 의미.
+- MSA : Microservice Architecture 하나의 큰 서비스를 여러 개의 독립적인 작은 서비스로 분리해 개발·배포·운영하는 아키텍처 스타일
+- MSK : Managed Streaming for Apache Kafka AWS에서 제공하는 Apache Kafka 관리형 서비스. Kafka 클러스터 구축/운영을 AWS가 대신 관리해줌.
+- CCB : Change Control Board (변경 심의 위원회)
+- SCM : Source Code Management Git 같은 형상관리/소스코드 관리 시스템 의미.
 
