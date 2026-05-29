@@ -13,13 +13,51 @@
 
 ## 2. 의존성이란? Nest.js에서 의존성을 왜 쓰는가? 자동으로 되어있는 이유? 어떤 구조?
 
+의존성(Dependency)은: 어떤 객체가 동작하기 위해 다른 객체를 필요로 하는 관계
+Service 혼자 DB 접근 못 하고 > Repository가 필요하니까 > Repository에 의존한다는 뜻.
+
+의존성 없이 직접 생성하면 문제점 : 결합도 증가, 테스트 어려움, 교체 어려움...
+DI(Dependency Injection) : 객체가 필요한 의존성을 직접 생성하지 않고, 외부에서 주입받는 방식
+
+nest에서는... 
+@Injectable()
+export class UserService {
+  constructor(
+    private readonly repo: UserRepository
+  ) {}
+}
+
+-> 처럼 자동으로 만들어줌. Nest에 내부적으로 IoC Container(Inversion of Control Container)가 있기 때문. (제어권이 뒤집혔다~)
+
+Nest 내부 구조
+데코레이터 수집 -> 메타데이터 분석 -> Provider Container 등록 -> 생성 시 의존성 해결
+Container가 그래프처럼 의존성 연결
+
+기본적으로 의존성 그래프 구조로 동작함 
+예시. 
+Controller
+  ↓
+Service
+  ↓
+Repository
+
+Nest는 이 관계를 분석해서:
+
+순서대로 생성
+singleton 관리
+순환 참조 검사
+
+등 수행함.
+ 
 
 
 ## 3. 동시성이란? 동시성 해결 방법
-
+블로그에 정리함 
  
 
 ## 4. RESTFUL API란?
+
+
 
 ## 5. POST와 GET의 차이 
 GET
@@ -59,8 +97,104 @@ HTTPS는 초기에 C,S가 통신을 하며 암호화 키를 서로 안전하게 
 
 
 ## 8. JWT 
+JSON Web Token
+사용자 인증/인가에 많이 사용하는 토큰 기반 인증 방식.
+JSON 형태의 정보를 Base64로 인코딩해서 서명(Signature)한 문자열이다.
+
+Header
+→ 어떤 알고리즘으로 서명했는지
+Payload
+→ 사용자 id, 권한(role), 만료시간(exp) 같은 데이터
+Signature
+→ 위변조 방지용 서명
+
+장점:
+서버 세션 저장 필요 없음 (stateless)
+확장성 좋음
+MSA 환경에서 많이 사용
+
+단점:
+탈취되면 만료 전까지 사용 가능
+강제 로그아웃 어려움
+Payload는 암호화가 아니라 인코딩이라 민감정보 넣으면 안 됨
+
+관련 개념:
+Access Token
+Refresh Token
+OAuth 2.0
+Bearer Token
+JWS / JWE
+
+- localStorage vs Cookie 차이?
+-> 저장 위치, 자동 전송 여부, 보안 특성
+localStorage는 구현은 쉽지만 XSS에 약하다.
+Cookie는 자동 전송되고 보안 옵션을 줄 수 있지만 CSRF에 주의해야 한다.
+*CSRF : Cross-Site Request Forgery (사이트 간 요청 위조)
+사용자가 의도하지 않았는데, 이미 로그인된 상태를 이용해서 악성 요청을 보내게 만드는 공격이야. -> “브라우저가 자동으로 쿠키를 보내는 특성”을 악용하는 것
+
+실무에서는 보통
+Access Token은 메모리
+Refresh Token은 HttpOnly Cookie
+조합을 많이 고려한다.
+
+- HttpOnly Cookie를 사용하는 이유는?
+JS로 토큰을 못 읽게 해서 XSS로 인한 탈취 위험을 줄이기 위해서
+HttpOnly가 붙은 쿠키는:
+
+브라우저가 HTTP 요청에는 자동으로 넣어주지만
+프론트엔드 JS에서 document.cookie로 읽을 수 없음
+
+JWT 자체는 암호화가 아니라 서명된 토큰이라서, 탈취되면 만료 전까지 악용 가능
+그래서 토큰을 브라우저 JS가 직접 만질 수 있게 두는 건 위험도가 올라간다.
+
+HttpOnly Cookie가 만능은 아니다.
+
+XSS는 줄일 수 있지만
+쿠키는 자동 전송되니까 CSRF 위험은 남을 수 있음
+
+HttpOnly Cookie는 JavaScript에서 접근할 수 없기 때문에 XSS로 인한 토큰 탈취를 방지하는 데 유리합니다. 다만 쿠키는 자동 전송되므로 CSRF 대응도 함께 고려해야 합니다.
+
+- JWT가 탈취되었을 때 대응 방법은?
+1. Access Token 만료 시간을 짧게 한다 : 토큰이 탈취되더라도 사용 가능한 시간을 줄인다 -> 너무 짧으면 재인증/재발급이 자주 발생함
+2. Refresh Token을 별도로 관리한다 : Access Token은 짧게, Refresh Token으로 다시 발급받게 한다. -> Refresh Token이 탈취되면 더 위험함
+3. Refresh Token Rotation 적용 : 리프레시 토큰을 재발급할 때마다 기존 토큰을 폐기하고 새 토큰을 준다 -> 탈취된 예전 Refresh Token 재사용 감지 가능, 재사용이 탐지되면 해당 세션 전체를 차단할 수 있음
+4. 서버에서 토큰 블랙리스트 관리 : 특정 토큰의 jti 같은 식별자를 Redis 등에 저장해서 무효화할 수 있음.
+5. 토큰 서명키 회전(Key Rotation) : 서버의 JWT 서명 키가 유출된 경우 전체 체계가 위험해질 수 있으니 키를 교체해야 함.
+
+   
+- 강제 로그아웃 구현하는 방법? : “서버가 이 사용자의 토큰을 더 이상 인정하지 않게 만드는 것”
+  JWT는 원래 stateless라서, 그냥 발급된 토큰 자체만 보면 서버가 즉시 무효화하기 어렵다
+  1. Refresh Token 삭제
+  2. Access Token 블랙리스트
+  3. 사용자별 토큰 버전 관리
+  4. 세션 ID 기반으로 서버 추적
+
+  
+
+- JWT의 크기가 커지면 어떤 문제가 있나요?
+JWT는 보통 요청마다 헤더에 실리기 때문에 크기가 커질수록 매 요청 오버헤드가 누적
+1. 네트워크 트래픽 증가
+2. HTTP 헤더 크기 제한에 걸릴 수 있음.
+3. 캐시 효율 저하 / 성능 저하
+4. 민감정보 노출 위험 증가
+
+
+- 대규모 서비스에서 Refresh Token 관리 방법은?
+누구의 어떤 디바이스 토큰인지 추적 가능해야 한다
+1. Redis에 저장
+2. DB에 저장
+3. 토큰 원문 저장 대신 해시 저장
+4. 디바이스 단위 관리
+5. Refresh Token Rotation + 재사용 탐지
 
 
 ## 9. 미들웨어
 미들웨어는 양 쪽을 연결하여 데이터를 주고 받을 수 있도록 중간에서 매개 역할을 하는 소프트웨어, 네트워크를 통해서 연결된 여러 개의 컴퓨터에 있는 많은 프로세스들에게 어떤 서비스를 사용할 수 있도록 연결해 주는 소프트웨어를 말한다. 3계층 클라이언트/서버 구조에서 미들웨어가 존재한다. 웹 브라우저에서 데이터베이스로부터 데이터를 저장하거나 읽어올 수 있게 중간에 미들웨어가 존재하게 된다.
+
+
+# 10.some Terminology
+MSA : Microservice Architecture 하나의 큰 서비스를 여러 개의 독립적인 작은 서비스로 분리해 개발·배포·운영하는 아키텍처 스타일
+MSK : Managed Streaming for Apache Kafka AWS에서 제공하는 Apache Kafka 관리형 서비스. Kafka 클러스터 구축/운영을 AWS가 대신 관리해줌.
+CCB : Change Control Board (변경 심의 위원회)
+SCM : Source Code Management Git 같은 형상관리/소스코드 관리 시스템 의미.
 
